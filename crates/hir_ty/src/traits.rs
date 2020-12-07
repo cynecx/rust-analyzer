@@ -27,7 +27,7 @@ fn create_chalk_solver() -> chalk_recursive::RecursiveSolver<Interner> {
     let overflow_depth =
         var("CHALK_OVERFLOW_DEPTH").ok().and_then(|s| s.parse().ok()).unwrap_or(100);
     let caching_enabled = true;
-    let max_size = var("CHALK_SOLVER_MAX_SIZE").ok().and_then(|s| s.parse().ok()).unwrap_or(30);
+    let max_size = var("CHALK_SOLVER_MAX_SIZE").ok().and_then(|s| s.parse().ok()).unwrap_or(100);
     chalk_recursive::RecursiveSolver::new(overflow_depth, max_size, caching_enabled)
 }
 
