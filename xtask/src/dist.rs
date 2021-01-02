@@ -63,7 +63,7 @@ fn dist_server() -> Result<()> {
         env::set_var("CC", "clang");
     }
 
-    cmd!("cargo build --manifest-path ./crates/rust-analyzer/Cargo.toml --bin rust-analyzer --target {target} --release").run()?;
+    cmd!("cargo build --manifest-path ./crates/rust-analyzer/Cargo.toml --bin rust-analyzer --target {target} --release --features mimalloc").run()?;
 
     let suffix = exe_suffix(&target);
     let src =
