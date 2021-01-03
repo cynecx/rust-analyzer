@@ -16,5 +16,5 @@ git remote add upstream "https://github.com/rust-analyzer/rust-analyzer.git"
 git fetch upstream
 
 git pull --no-edit --stat --rebase upstream master
-git push origin
+git push -f origin nightly-builds
 
