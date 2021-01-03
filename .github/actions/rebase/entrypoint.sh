@@ -7,6 +7,8 @@ if [[ -z "$GITHUB_TOKEN" ]]; then
 	exit 1
 fi
 
+cd nightly-builds
+
 git config --global user.email "runner@gha.local"
 git config --global user.name "GitHub Actions"
 

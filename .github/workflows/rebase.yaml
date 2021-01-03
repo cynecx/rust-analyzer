@@ -11,13 +11,19 @@ jobs:
   rebase:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (nightly-builds)
         uses: actions/checkout@v2
         with:
           ref: nightly-builds
+          path: nightly-builds
           fetch-depth: 0
+      - name: Checkout repository (trigger)
+        uses: actions/checkout@v2
+        with:
+          ref: trigger
+          path: trigger
       - name: Rebase
-        uses: ./.github/actions/rebase
+        uses: ./trigger/.github/actions/rebase
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
