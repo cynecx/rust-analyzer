@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::Result;
 use flate2::{write::GzEncoder, Compression};
-use xshell::{cmd, cp, mkdir_p, pushd, read_file, rm_rf, write_file};
+use xshell::{cmd, mkdir_p, pushd, read_file, rm_rf, write_file};
 
 use crate::{date_iso, project_root};
 
