@@ -745,3 +745,32 @@ fn return_value_no_block() {
         r#"fn f() -> i32 { match () { () => return $0 } }"#,
     );
 }
+
+#[test]
+fn complete_dot_float_method() {
+    check(
+        r#"
+struct A;
+struct B;
+impl A {
+    fn slush(&self) -> usize { }
+}
+impl B {
+    fn boba(&self) -> bool { }
+}
+fn testy() {
+    let a = |event: (A, B)| event.1.$0;
+}
+        "#,
+        expect![[r#"
+            me boba() fn(&self) -> bool
+            sn box    Box::new(expr)
+            sn call   function(expr)
+            sn dbg    dbg!(expr)
+            sn dbgr   dbg!(&expr)
+            sn match  match expr {}
+            sn ref    &expr
+            sn refm   &mut expr
+        "#]],
+    );
+}

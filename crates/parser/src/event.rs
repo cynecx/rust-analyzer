@@ -73,6 +73,7 @@ pub(crate) enum Event {
     Token {
         kind: SyntaxKind,
         n_raw_tokens: u8,
+        is_partial: bool,
     },
 
     Error {
@@ -83,6 +84,14 @@ pub(crate) enum Event {
 impl Event {
     pub(crate) fn tombstone() -> Self {
         Event::Start { kind: TOMBSTONE, forward_parent: None }
+    }
+}
+
+#[inline]
+fn map_internal_syntax_kind(kind: SyntaxKind) -> SyntaxKind {
+    match kind {
+        FLOAT_NUMBER_1 | FLOAT_NUMBER_2 => FLOAT_NUMBER,
+        kind => kind,
     }
 }
 
@@ -117,13 +126,13 @@ pub(super) fn process(mut events: Vec<Event>) -> Output {
 
                 for kind in forward_parents.drain(..).rev() {
                     if kind != TOMBSTONE {
-                        res.enter_node(kind);
+                        res.enter_node(map_internal_syntax_kind(kind));
                     }
                 }
             }
             Event::Finish => res.leave_node(),
-            Event::Token { kind, n_raw_tokens } => {
-                res.token(kind, n_raw_tokens);
+            Event::Token { kind, n_raw_tokens, is_partial } => {
+                res.token(map_internal_syntax_kind(kind), n_raw_tokens, is_partial);
             }
             Event::Error { msg } => res.error(msg),
         }

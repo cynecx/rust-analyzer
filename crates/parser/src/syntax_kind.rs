@@ -26,4 +26,12 @@ impl SyntaxKind {
     pub fn is_trivia(self) -> bool {
         matches!(self, SyntaxKind::WHITESPACE | SyntaxKind::COMMENT)
     }
+
+    #[inline]
+    pub fn is_float_number(self) -> bool {
+        matches!(
+            self,
+            SyntaxKind::FLOAT_NUMBER | SyntaxKind::FLOAT_NUMBER_1 | SyntaxKind::FLOAT_NUMBER_2
+        )
+    }
 }

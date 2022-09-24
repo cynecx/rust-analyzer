@@ -111,6 +111,8 @@ pub enum SyntaxKind {
     MACRO_RULES_KW,
     INT_NUMBER,
     FLOAT_NUMBER,
+    FLOAT_NUMBER_1,
+    FLOAT_NUMBER_2,
     CHAR,
     BYTE,
     STRING,
@@ -372,7 +374,17 @@ impl SyntaxKind {
         )
     }
     pub fn is_literal(self) -> bool {
-        matches!(self, INT_NUMBER | FLOAT_NUMBER | CHAR | BYTE | STRING | BYTE_STRING)
+        matches!(
+            self,
+            INT_NUMBER
+                | FLOAT_NUMBER
+                | FLOAT_NUMBER_1
+                | FLOAT_NUMBER_2
+                | CHAR
+                | BYTE
+                | STRING
+                | BYTE_STRING
+        )
     }
     pub fn from_keyword(ident: &str) -> Option<SyntaxKind> {
         let kw = match ident {

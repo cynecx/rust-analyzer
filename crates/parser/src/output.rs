@@ -16,7 +16,7 @@ pub struct Output {
     /// 32-bit encoding of events. If LSB is zero, then that's an index into the
     /// error vector. Otherwise, it's one of the thee other variants, with data encoded as
     ///
-    ///     |16 bit kind|8 bit n_input_tokens|4 bit tag|4 bit leftover|
+    ///     |16 bit kind|8 bit n_input_tokens|2 bit tag|2 bit flags|3 bit leftover|1 bit error
     ///
     event: Vec<u32>,
     error: Vec<String>,
@@ -24,7 +24,7 @@ pub struct Output {
 
 #[derive(Debug)]
 pub enum Step<'a> {
-    Token { kind: SyntaxKind, n_input_tokens: u8 },
+    Token { kind: SyntaxKind, n_input_tokens: u8, is_partial: bool },
     Enter { kind: SyntaxKind },
     Exit,
     Error { msg: &'a str },
@@ -36,12 +36,13 @@ impl Output {
             if event & 0b1 == 0 {
                 return Step::Error { msg: self.error[(event as usize) >> 1].as_str() };
             }
-            let tag = ((event & 0x0000_00F0) >> 4) as u8;
+            let tag = ((event & 0x0000_00C0) >> 6) as u8;
+            let flags = ((event & 0x0000_0030) >> 4) as u8;
             match tag {
                 0 => {
                     let kind: SyntaxKind = (((event & 0xFFFF_0000) >> 16) as u16).into();
                     let n_input_tokens = ((event & 0x0000_FF00) >> 8) as u8;
-                    Step::Token { kind, n_input_tokens }
+                    Step::Token { kind, n_input_tokens, is_partial: flags & 1 == 1 }
                 }
                 1 => {
                     let kind: SyntaxKind = (((event & 0xFFFF_0000) >> 16) as u16).into();
@@ -53,18 +54,23 @@ impl Output {
         })
     }
 
-    pub(crate) fn token(&mut self, kind: SyntaxKind, n_tokens: u8) {
-        let e = ((kind as u16 as u32) << 16) | ((n_tokens as u32) << 8) | (0 << 4) | 1;
+    pub(crate) fn token(&mut self, kind: SyntaxKind, n_tokens: u8, is_partial: bool) {
+        let flags = if is_partial { 1 } else { 0 };
+        let e = ((kind as u16 as u32) << 16)
+            | ((n_tokens as u32) << 8)
+            | (0 << 6)
+            | ((flags & 3) << 4)
+            | 1;
         self.event.push(e)
     }
 
     pub(crate) fn enter_node(&mut self, kind: SyntaxKind) {
-        let e = ((kind as u16 as u32) << 16) | (1 << 4) | 1;
+        let e = ((kind as u16 as u32) << 16) | (1 << 6) | 1;
         self.event.push(e)
     }
 
     pub(crate) fn leave_node(&mut self) {
-        let e = 2 << 4 | 1;
+        let e = 2 << 6 | 1;
         self.event.push(e)
     }
 

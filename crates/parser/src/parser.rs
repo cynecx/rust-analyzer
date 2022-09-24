@@ -7,7 +7,7 @@ use limit::Limit;
 
 use crate::{
     event::Event,
-    input::Input,
+    input::{Input, MutableInput},
     SyntaxKind::{self, EOF, ERROR, TOMBSTONE},
     TokenSet, T,
 };
@@ -22,7 +22,7 @@ use crate::{
 /// "start expression, consume number literal,
 /// finish expression". See `Event` docs for more.
 pub(crate) struct Parser<'t> {
-    inp: &'t Input,
+    input: MutableInput<'t>,
     pos: usize,
     events: Vec<Event>,
     steps: Cell<u32>,
@@ -31,8 +31,8 @@ pub(crate) struct Parser<'t> {
 static PARSER_STEP_LIMIT: Limit = Limit::new(15_000_000);
 
 impl<'t> Parser<'t> {
-    pub(super) fn new(inp: &'t Input) -> Parser<'t> {
-        Parser { inp, pos: 0, events: Vec::new(), steps: Cell::new(0) }
+    pub(super) fn new(input: &'t Input) -> Parser<'t> {
+        Parser { input: MutableInput::new(input), pos: 0, events: Vec::new(), steps: Cell::new(0) }
     }
 
     pub(crate) fn finish(self) -> Vec<Event> {
@@ -55,7 +55,7 @@ impl<'t> Parser<'t> {
         assert!(PARSER_STEP_LIMIT.check(steps as usize).is_ok(), "the parser seems stuck");
         self.steps.set(steps + 1);
 
-        self.inp.kind(self.pos + n)
+        self.input.kind(n)
     }
 
     /// Checks if the current token is `kind`.
@@ -91,7 +91,7 @@ impl<'t> Parser<'t> {
             T![<<=] => self.at_composite3(n, T![<], T![<], T![=]),
             T![>>=] => self.at_composite3(n, T![>], T![>], T![=]),
 
-            _ => self.inp.kind(self.pos + n) == kind,
+            _ => self.input.kind(n) == kind,
         }
     }
 
@@ -130,17 +130,15 @@ impl<'t> Parser<'t> {
     }
 
     fn at_composite2(&self, n: usize, k1: SyntaxKind, k2: SyntaxKind) -> bool {
-        self.inp.kind(self.pos + n) == k1
-            && self.inp.kind(self.pos + n + 1) == k2
-            && self.inp.is_joint(self.pos + n)
+        self.input.kind(n) == k1 && self.input.kind(n + 1) == k2 && self.input.is_joint(n)
     }
 
     fn at_composite3(&self, n: usize, k1: SyntaxKind, k2: SyntaxKind, k3: SyntaxKind) -> bool {
-        self.inp.kind(self.pos + n) == k1
-            && self.inp.kind(self.pos + n + 1) == k2
-            && self.inp.kind(self.pos + n + 2) == k3
-            && self.inp.is_joint(self.pos + n)
-            && self.inp.is_joint(self.pos + n + 1)
+        self.input.kind(n) == k1
+            && self.input.kind(n + 1) == k2
+            && self.input.kind(n + 2) == k3
+            && self.input.is_joint(n)
+            && self.input.is_joint(n + 1)
     }
 
     /// Checks if the current token is in `kinds`.
@@ -150,7 +148,7 @@ impl<'t> Parser<'t> {
 
     /// Checks if the current token is contextual keyword with text `t`.
     pub(crate) fn at_contextual_kw(&self, kw: SyntaxKind) -> bool {
-        self.inp.contextual_kind(self.pos) == kw
+        self.input.contextual_kind(0) == kw
     }
 
     /// Starts a new node in the syntax tree. All nodes and tokens
@@ -176,6 +174,15 @@ impl<'t> Parser<'t> {
         self.do_bump(kind, 1);
     }
 
+    /// Advances the parser by one token
+    pub(crate) fn swallow(&mut self) {
+        let kind = self.nth(0);
+        if kind == EOF {
+            return;
+        }
+        self.do_swallow(1);
+    }
+
     /// Advances the parser by one token, remapping its kind.
     /// This is useful to create contextual keywords from
     /// identifiers. For example, the lexer creates a `union`
@@ -188,6 +195,13 @@ impl<'t> Parser<'t> {
             return;
         }
         self.do_bump(kind, 1);
+    }
+
+    pub(crate) fn inject(&mut self, kind: SyntaxKind) {
+        if self.nth(0) == EOF {
+            return;
+        }
+        self.input.inject(kind);
     }
 
     /// Emit error with the `message`
@@ -237,7 +251,19 @@ impl<'t> Parser<'t> {
 
     fn do_bump(&mut self, kind: SyntaxKind, n_raw_tokens: u8) {
         self.pos += n_raw_tokens as usize;
-        self.push_event(Event::Token { kind, n_raw_tokens });
+        let is_partial = self.input.bump(n_raw_tokens as usize);
+        if is_partial {
+            assert_eq!(n_raw_tokens, 1);
+        }
+        self.push_event(Event::Token { kind, n_raw_tokens, is_partial });
+    }
+
+    fn do_swallow(&mut self, n_raw_tokens: u8) {
+        self.pos += n_raw_tokens as usize;
+        let is_partial = self.input.bump(n_raw_tokens as usize);
+        if is_partial {
+            assert_eq!(n_raw_tokens, 1);
+        }
     }
 
     fn push_event(&mut self, event: Event) {

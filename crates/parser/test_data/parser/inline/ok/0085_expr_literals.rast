@@ -57,7 +57,31 @@ SOURCE_FILE
           EQ "="
           WHITESPACE " "
           LITERAL
-            FLOAT_NUMBER "2.0"
+            FLOAT_NUMBER "2.34e1"
+          SEMICOLON ";"
+        WHITESPACE "\n    "
+        LET_STMT
+          LET_KW "let"
+          WHITESPACE " "
+          WILDCARD_PAT
+            UNDERSCORE "_"
+          WHITESPACE " "
+          EQ "="
+          WHITESPACE " "
+          LITERAL
+            FLOAT_NUMBER "3."
+          SEMICOLON ";"
+        WHITESPACE "\n    "
+        LET_STMT
+          LET_KW "let"
+          WHITESPACE " "
+          WILDCARD_PAT
+            UNDERSCORE "_"
+          WHITESPACE " "
+          EQ "="
+          WHITESPACE " "
+          LITERAL
+            FLOAT_NUMBER "4.0"
           SEMICOLON ";"
         WHITESPACE "\n    "
         LET_STMT

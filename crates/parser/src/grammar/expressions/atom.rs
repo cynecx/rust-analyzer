@@ -5,7 +5,9 @@ use super::*;
 //     let _ = true;
 //     let _ = false;
 //     let _ = 1;
-//     let _ = 2.0;
+//     let _ = 2.34e1;
+//     let _ = 3.;
+//     let _ = 4.0;
 //     let _ = b'a';
 //     let _ = 'b';
 //     let _ = "c";
@@ -18,6 +20,8 @@ pub(crate) const LITERAL_FIRST: TokenSet = TokenSet::new(&[
     T![false],
     INT_NUMBER,
     FLOAT_NUMBER,
+    FLOAT_NUMBER_1,
+    FLOAT_NUMBER_2,
     BYTE,
     CHAR,
     STRING,

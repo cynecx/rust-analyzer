@@ -177,7 +177,7 @@ impl<'a> Converter<'a> {
 
                 rustc_lexer::TokenKind::RawIdent => IDENT,
                 rustc_lexer::TokenKind::Literal { kind, .. } => {
-                    self.extend_literal(token_text.len(), kind);
+                    self.extend_literal(token_text, kind);
                     return;
                 }
 
@@ -223,7 +223,8 @@ impl<'a> Converter<'a> {
         self.push(syntax_kind, token_text.len(), err);
     }
 
-    fn extend_literal(&mut self, len: usize, kind: &rustc_lexer::LiteralKind) {
+    fn extend_literal(&mut self, token_text: &str, kind: &rustc_lexer::LiteralKind) {
+        let len = token_text.len();
         let mut err = "";
 
         let syntax_kind = match *kind {
@@ -233,11 +234,30 @@ impl<'a> Converter<'a> {
                 }
                 INT_NUMBER
             }
-            rustc_lexer::LiteralKind::Float { empty_exponent, base: _ } => {
+            rustc_lexer::LiteralKind::Float { empty_exponent, base } => {
                 if empty_exponent {
                     err = "Missing digits after the exponent symbol";
                 }
-                FLOAT_NUMBER
+                if base == rustc_lexer::Base::Decimal {
+                    token_text
+                        .split_once('.')
+                        .and_then(|(int, dec)| {
+                            let valid_int =
+                                !int.is_empty() && int.chars().all(|c| c.is_digit(10) || c == '_');
+                            let valid_dec =
+                                !dec.is_empty() && dec.chars().all(|c| c.is_digit(10) || c == '_');
+                            if valid_int && dec.is_empty() {
+                                Some(FLOAT_NUMBER_1)
+                            } else if valid_int && valid_dec {
+                                Some(FLOAT_NUMBER_2)
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap_or(FLOAT_NUMBER)
+                } else {
+                    FLOAT_NUMBER
+                }
             }
             rustc_lexer::LiteralKind::Char { terminated } => {
                 if !terminated {

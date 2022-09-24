@@ -55,6 +55,22 @@ SOURCE_FILE
               L_PAREN "("
               R_PAREN ")"
           SEMICOLON ";"
+        WHITESPACE "\n    "
+        EXPR_STMT
+          FIELD_EXPR
+            FIELD_EXPR
+              PATH_EXPR
+                PATH
+                  PATH_SEGMENT
+                    NAME_REF
+                      IDENT "x"
+              DOT "."
+              NAME_REF
+                INT_NUMBER "0"
+            DOT "."
+            NAME_REF
+              INT_NUMBER "1"
+          SEMICOLON ";"
         WHITESPACE "\n"
         R_CURLY "}"
   WHITESPACE "\n"

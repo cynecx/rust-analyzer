@@ -473,15 +473,25 @@ fn method_call_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker
 //     x.foo;
 //     x.0.bar;
 //     x.0();
+//     x.0.1;
 // }
 fn field_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
     assert!(p.at(T![.]));
     let m = lhs.precede(p);
     p.bump(T![.]);
+    if p.at(FLOAT_NUMBER_1) {
+        p.swallow();
+        p.inject(INT_NUMBER);
+        p.inject(DOT);
+    } else if p.at(FLOAT_NUMBER_2) {
+        p.swallow();
+        p.inject(INT_NUMBER);
+        p.inject(DOT);
+        p.inject(INT_NUMBER);
+    }
     if p.at(IDENT) || p.at(INT_NUMBER) {
         name_ref_or_index(p);
     } else if p.at(FLOAT_NUMBER) {
-        // FIXME: How to recover and instead parse INT + T![.]?
         p.bump_any();
     } else {
         p.error("expected field name or number");

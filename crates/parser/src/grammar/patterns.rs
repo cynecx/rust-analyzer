@@ -168,7 +168,7 @@ fn atom_pat(p: &mut Parser<'_>, recovery_set: TokenSet) -> Option<CompletedMarke
 }
 
 fn is_literal_pat_start(p: &Parser<'_>) -> bool {
-    p.at(T![-]) && (p.nth(1) == INT_NUMBER || p.nth(1) == FLOAT_NUMBER)
+    p.at(T![-]) && (p.nth(1) == INT_NUMBER || p.nth(1).is_float_number())
         || p.at_ts(expressions::LITERAL_FIRST)
 }
 

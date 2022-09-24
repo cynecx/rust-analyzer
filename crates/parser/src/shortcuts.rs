@@ -56,12 +56,13 @@ impl<'a> LexedStr<'a> {
         output: &crate::Output,
         sink: &mut dyn FnMut(StrStep<'_>),
     ) -> bool {
-        let mut builder = Builder { lexed: self, pos: 0, state: State::PendingEnter, sink };
+        let mut builder =
+            Builder { lexed: self, pos: 0, partial: None, state: State::PendingEnter, sink };
 
         for event in output.iter() {
             match event {
-                Step::Token { kind, n_input_tokens: n_raw_tokens } => {
-                    builder.token(kind, n_raw_tokens)
+                Step::Token { kind, n_input_tokens: n_raw_tokens, is_partial } => {
+                    builder.token(kind, n_raw_tokens, is_partial)
                 }
                 Step::Enter { kind } => builder.enter(kind),
                 Step::Exit => builder.exit(),
@@ -88,6 +89,7 @@ impl<'a> LexedStr<'a> {
 struct Builder<'a, 'b> {
     lexed: &'a LexedStr<'a>,
     pos: usize,
+    partial: Option<usize>,
     state: State,
     sink: &'b mut dyn FnMut(StrStep<'_>),
 }
@@ -99,14 +101,14 @@ enum State {
 }
 
 impl Builder<'_, '_> {
-    fn token(&mut self, kind: SyntaxKind, n_tokens: u8) {
+    fn token(&mut self, kind: SyntaxKind, n_tokens: u8, is_partial: bool) {
         match mem::replace(&mut self.state, State::Normal) {
             State::PendingEnter => unreachable!(),
             State::PendingExit => (self.sink)(StrStep::Exit),
             State::Normal => (),
         }
         self.eat_trivias();
-        self.do_token(kind, n_tokens as usize);
+        self.do_token(kind, n_tokens as usize, is_partial);
     }
 
     fn enter(&mut self, kind: SyntaxKind) {
@@ -147,7 +149,7 @@ impl Builder<'_, '_> {
             if !kind.is_trivia() {
                 break;
             }
-            self.do_token(kind, 1);
+            self.do_token(kind, 1, false);
         }
     }
 
@@ -155,14 +157,38 @@ impl Builder<'_, '_> {
         for _ in 0..n {
             let kind = self.lexed.kind(self.pos);
             assert!(kind.is_trivia());
-            self.do_token(kind, 1);
+            self.do_token(kind, 1, false);
         }
     }
 
-    fn do_token(&mut self, kind: SyntaxKind, n_tokens: usize) {
-        let text = &self.lexed.range_text(self.pos..self.pos + n_tokens);
-        self.pos += n_tokens;
-        (self.sink)(StrStep::Token { kind, text });
+    fn do_token(&mut self, kind: SyntaxKind, n_tokens: usize, is_partial: bool) {
+        if is_partial {
+            assert_eq!(n_tokens, 1);
+            let offset = self.partial.unwrap_or(0);
+            let text = &self.lexed.range_text(self.pos..self.pos + 1)[offset..];
+            let len = match kind {
+                INT_NUMBER => lex_int(text),
+                DOT => {
+                    let token = text.chars().next().unwrap();
+                    assert_eq!(token, '.');
+                    1
+                }
+                _ => unimplemented!(),
+            };
+            assert!(len > 0);
+            (self.sink)(StrStep::Token { kind, text: &text[0..len] });
+            self.partial = Some(offset + len);
+        } else {
+            if let Some(offset) = self.partial {
+                let text = &self.lexed.range_text(self.pos..self.pos + 1);
+                assert_eq!(offset, text.len());
+                self.pos += 1;
+                self.partial = None;
+            }
+            let text = &self.lexed.range_text(self.pos..self.pos + n_tokens);
+            self.pos += n_tokens;
+            (self.sink)(StrStep::Token { kind, text });
+        }
     }
 }
 
@@ -212,4 +238,24 @@ fn is_outer(text: &str) -> bool {
 
 fn is_inner(text: &str) -> bool {
     text.starts_with("//!") || text.starts_with("/*!")
+}
+
+fn lex_int(input: &str) -> usize {
+    let mut len = 0;
+    let mut has_digits = false;
+    for chr in input.chars() {
+        match chr {
+            '_' => (),
+            '0'..='9' => {
+                has_digits = true;
+            }
+            _ => break,
+        }
+        len += 1;
+    }
+    if has_digits {
+        len
+    } else {
+        0
+    }
 }

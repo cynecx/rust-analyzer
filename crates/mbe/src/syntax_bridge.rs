@@ -81,7 +81,7 @@ pub fn token_tree_to_syntax_node(
     let mut tree_sink = TtTreeSink::new(buffer.begin());
     for event in parser_output.iter() {
         match event {
-            parser::Step::Token { kind, n_input_tokens: n_raw_tokens } => {
+            parser::Step::Token { kind, n_input_tokens: n_raw_tokens, .. } => {
                 tree_sink.token(kind, n_raw_tokens)
             }
             parser::Step::Enter { kind } => tree_sink.start_node(kind),

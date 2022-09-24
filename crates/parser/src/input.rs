@@ -2,6 +2,8 @@
 
 use crate::SyntaxKind;
 
+use std::collections::VecDeque;
+
 #[allow(non_camel_case_types)]
 type bits = u64;
 
@@ -84,5 +86,52 @@ impl Input {
     }
     fn len(&self) -> usize {
         self.kind.len()
+    }
+}
+
+pub struct MutableInput<'a> {
+    input: &'a Input,
+    injected_tokens: VecDeque<SyntaxKind>,
+    pos: usize,
+}
+
+impl<'a> MutableInput<'a> {
+    pub fn new(input: &'a Input) -> Self {
+        Self { input, injected_tokens: VecDeque::new(), pos: 0 }
+    }
+
+    pub fn bump(&mut self, n: usize) -> bool {
+        let bump_injected = n.min(self.injected_tokens.len());
+        let _ = self.injected_tokens.drain(0..bump_injected);
+        self.pos += n - bump_injected;
+        bump_injected > 0
+    }
+
+    pub fn inject(&mut self, token: SyntaxKind) {
+        self.injected_tokens.push_back(token);
+    }
+
+    pub fn kind(&self, offset: usize) -> SyntaxKind {
+        if let Some(&kind) = self.injected_tokens.iter().nth(offset) {
+            return kind;
+        }
+        let offset = offset - self.injected_tokens.len();
+        self.input.kind(self.pos + offset)
+    }
+
+    pub fn contextual_kind(&self, offset: usize) -> SyntaxKind {
+        if self.injected_tokens.iter().nth(offset).is_some() {
+            return SyntaxKind::EOF;
+        }
+        let offset = offset - self.injected_tokens.len();
+        self.input.contextual_kind(self.pos + offset)
+    }
+
+    pub fn is_joint(&self, offset: usize) -> bool {
+        if self.injected_tokens.iter().nth(offset).is_some() {
+            return false;
+        }
+        let offset = offset - self.injected_tokens.len();
+        self.input.is_joint(self.pos + offset)
     }
 }

@@ -99,7 +99,7 @@ impl<'a> TtIter<'a> {
         let mut error = false;
         for step in tree_traversal.iter() {
             match step {
-                parser::Step::Token { kind, mut n_input_tokens } => {
+                parser::Step::Token { kind, mut n_input_tokens, .. } => {
                     if kind == SyntaxKind::LIFETIME_IDENT {
                         n_input_tokens = 2;
                     }

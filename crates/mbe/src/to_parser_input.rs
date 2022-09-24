@@ -39,10 +39,21 @@ pub(crate) fn to_parser_input(buffer: &TokenBuffer<'_>) -> parser::Input {
                             .map(|(kind, _error)| kind)
                             .filter(|kind| {
                                 kind.is_literal()
-                                    && (!is_negated || matches!(kind, FLOAT_NUMBER | INT_NUMBER))
+                                    && (!is_negated
+                                        || matches!(
+                                            kind,
+                                            FLOAT_NUMBER
+                                                | INT_NUMBER
+                                                | FLOAT_NUMBER_1
+                                                | FLOAT_NUMBER_2
+                                        ))
                             })
                             .unwrap_or_else(|| panic!("Fail to convert given literal {:#?}", &lit));
-
+                        let kind = match kind {
+                            FLOAT_NUMBER_1 => FLOAT_NUMBER,
+                            FLOAT_NUMBER_2 => FLOAT_NUMBER,
+                            kind => kind,
+                        };
                         res.push(kind);
                     }
                     tt::Leaf::Ident(ident) => match ident.text.as_ref() {
