@@ -10,7 +10,7 @@ use ide_db::{
 };
 use itertools::Itertools;
 use smallvec::SmallVec;
-use stdx::{format_to, impl_from, never};
+use stdx::{format_to, impl_from};
 use syntax::{format_smolstr, Edition, SmolStr, TextRange, TextSize};
 
 use crate::{
@@ -438,6 +438,7 @@ impl CompletionItem {
             is_snippet: false,
             trait_name: None,
             detail: None,
+            detail_right: None,
             documentation: None,
             lookup: None,
             kind: kind.into(),
@@ -488,6 +489,7 @@ pub(crate) struct Builder {
     insert_text: Option<String>,
     is_snippet: bool,
     detail: Option<String>,
+    detail_right: Option<String>,
     documentation: Option<Documentation>,
     lookup: Option<SmolStr>,
     kind: CompletionItemKind,
@@ -574,13 +576,18 @@ impl Builder {
             .map(|import| import.import_path.display(db, self.edition).to_string())
             .collect();
 
+        let detail_right = self.detail_right.or_else(|| self.detail.clone());
+
+        let detail_right = match detail_right {
+            Some(detail) if detail.contains('\n') => {
+                Some(detail.split('\n').next().unwrap().to_owned())
+            }
+            detail => detail,
+        };
+
         CompletionItem {
             source_range: self.source_range,
-            label: CompletionItemLabel {
-                primary: label,
-                detail_left,
-                detail_right: self.detail.clone(),
-            },
+            label: CompletionItemLabel { primary: label, detail_left, detail_right },
             text_edit,
             is_snippet: self.is_snippet,
             detail: self.detail,
@@ -636,11 +643,16 @@ impl Builder {
     }
     pub(crate) fn set_detail(&mut self, detail: Option<impl Into<String>>) -> &mut Builder {
         self.detail = detail.map(Into::into);
-        if let Some(detail) = &self.detail {
-            if never!(detail.contains('\n'), "multiline detail:\n{}", detail) {
-                self.detail = Some(detail.split('\n').next().unwrap().to_owned());
-            }
-        }
+        self
+    }
+    pub(crate) fn detail_right(&mut self, detail_right: impl Into<String>) -> &mut Builder {
+        self.set_detail_right(Some(detail_right))
+    }
+    pub(crate) fn set_detail_right(
+        &mut self,
+        detail_right: Option<impl Into<String>>,
+    ) -> &mut Builder {
+        self.detail_right = detail_right.map(Into::into);
         self
     }
     #[allow(unused)]

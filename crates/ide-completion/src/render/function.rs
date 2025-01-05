@@ -141,14 +141,15 @@ fn render(
         _ => (),
     }
 
-    let detail = if ctx.completion.config.full_function_signatures {
-        detail_full(ctx.completion, func)
+    if ctx.completion.config.full_function_signatures {
+        item.detail(detail_full(ctx.completion, func));
+        item.detail_right(detail(ctx.completion, func));
     } else {
-        detail(ctx.completion, func)
-    };
+        item.detail(detail(ctx.completion, func));
+    }
+
     item.set_documentation(ctx.docs(func))
         .set_deprecated(ctx.is_deprecated(func) || ctx.is_deprecated_assoc_item(func))
-        .detail(detail)
         .lookup_by(name.as_str().to_smolstr());
 
     if let Some((cap, (self_param, params))) = complete_call_parens {
@@ -332,18 +333,7 @@ fn detail(ctx: &CompletionContext<'_>, func: hir::Function) -> String {
 }
 
 fn detail_full(ctx: &CompletionContext<'_>, func: hir::Function) -> String {
-    let signature = format!("{}", func.display(ctx.db, ctx.display_target));
-    let mut detail = String::with_capacity(signature.len());
-
-    for segment in signature.split_whitespace() {
-        if !detail.is_empty() {
-            detail.push(' ');
-        }
-
-        detail.push_str(segment);
-    }
-
-    detail
+    func.display(ctx.db, ctx.display_target).to_string()
 }
 
 fn params_display(ctx: &CompletionContext<'_>, func: hir::Function) -> String {
