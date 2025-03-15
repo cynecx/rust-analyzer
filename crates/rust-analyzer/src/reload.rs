@@ -920,6 +920,7 @@ pub(crate) fn should_refresh_for_change(
     path: &AbsPath,
     change_kind: ChangeKind,
     additional_paths: &[&str],
+    config: &Config,
 ) -> bool {
     const IMPLICIT_TARGET_FILES: &[&str] = &["build.rs", "src/main.rs", "src/lib.rs"];
     const IMPLICIT_TARGET_DIRS: &[&str] = &["src/bin", "examples", "tests", "benches"];
@@ -929,8 +930,10 @@ pub(crate) fn should_refresh_for_change(
         None => return false,
     };
 
-    if let "Cargo.toml" | "Cargo.lock" = file_name {
-        return true;
+    if config.cargo_autoreload_config(None) {
+        if let "Cargo.toml" | "Cargo.lock" = file_name {
+            return true;
+        }
     }
 
     if additional_paths.contains(&file_name) {

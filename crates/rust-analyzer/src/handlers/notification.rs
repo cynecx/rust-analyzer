@@ -177,7 +177,12 @@ pub(crate) fn handle_did_save_text_document(
 
             // FIXME: We should move this check into a QueuedTask and do semantic resolution of
             // the files. There is only so much we can tell syntactically from the path.
-            if reload::should_refresh_for_change(path, ChangeKind::Modify, additional_files) {
+            if reload::should_refresh_for_change(
+                path,
+                ChangeKind::Modify,
+                additional_files,
+                &state.config,
+            ) {
                 state.fetch_workspaces_queue.request_op(
                     format!("workspace vfs file change saved {path}"),
                     FetchWorkspaceRequest {

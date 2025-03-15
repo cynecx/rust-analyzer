@@ -491,14 +491,10 @@ impl GlobalState {
             }
         }
 
-        if self.config.cargo_autoreload_config(None)
-            || self.config.discover_workspace_config().is_some()
+        if let Some((cause, FetchWorkspaceRequest { path, force_crate_graph_reload })) =
+            self.fetch_workspaces_queue.should_start_op()
         {
-            if let Some((cause, FetchWorkspaceRequest { path, force_crate_graph_reload })) =
-                self.fetch_workspaces_queue.should_start_op()
-            {
-                self.fetch_workspaces(cause, path, force_crate_graph_reload);
-            }
+            self.fetch_workspaces(cause, path, force_crate_graph_reload);
         }
 
         if !self.fetch_workspaces_queue.op_in_progress() {

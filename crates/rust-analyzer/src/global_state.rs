@@ -346,6 +346,7 @@ impl GlobalState {
                         &path,
                         file.kind(),
                         &additional_files,
+                        &self.config,
                     ) {
                         trace!(?path, kind = ?file.kind(), "refreshing for a change");
                         workspace_structure_change.get_or_insert((path.clone(), false));
